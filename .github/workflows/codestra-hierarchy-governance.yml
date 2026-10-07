@@ -1,0 +1,28 @@
+name: Codestra Hierarchy Governance
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hierarchy-governance:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - shell: python
+        run: |
+          import pathlib, yaml
+          d = yaml.safe_load(pathlib.Path(".codestra/control-plane.yml").read_text())
+          assert d["promotion"]["chain"] == ["development","testing","staging","production"]
+          assert d["promotion"]["force_push_allowed"] is False
+          for k in ("production_go","live_capabilities_enabled","external_effects_enabled","whatsapp_send_enabled","provider_activation_enabled"):
+              assert d["effects"][k] is False
+          assert len(d["sections"]) == 8
+          print("hierarchy governance PASS")
